@@ -1,0 +1,126 @@
+.footer {
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-24);
+  padding: var(--space-16) 0 var(--space-8);
+}
+
+.footer__inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.footer__top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-16);
+}
+
+.footer__brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.footer__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.footer__logo-bracket {
+  color: var(--accent);
+  font-family: var(--font-code);
+  font-size: 0.9rem;
+}
+
+.footer__tagline {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 28ch;
+}
+
+.footer__links {
+  display: flex;
+  gap: var(--space-16);
+  justify-content: flex-end;
+}
+
+.footer__col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.footer__col-title {
+  font-family: var(--font-code);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.footer__col a,
+.footer__col span:not(.footer__col-title) {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  transition: color var(--duration-fast) ease;
+}
+
+.footer__col a:hover {
+  color: var(--text-primary);
+}
+
+.footer__bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--border);
+}
+
+.footer__mono {
+  font-family: var(--font-code);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.footer__system {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.footer__sys-label {
+  font-family: var(--font-code);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+}
+
+.footer__sys-nodes {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-code);
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+}
+
+.footer__arrow {
+  color: var(--accent);
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  .footer__top { grid-template-columns: 1fr; gap: var(--space-8); }
+  .footer__links { justify-content: flex-start; }
+  .footer__bottom { flex-direction: column; align-items: flex-start; gap: var(--space-4); }
+  .footer__sys-nodes { flex-wrap: wrap; }
+}
