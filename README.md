@@ -1,21 +1,8 @@
-<p align="center">
-  <img src="https://img.shields.io/badge/CodeLens-AI%20Code%20Review%20%26%20Visualizer-C4956A?style=for-the-badge&labelColor=0E0C09" alt="CodeLens" />
-</p>
-
 <h1 align="center">CodeLens</h1>
 
 <p align="center">
   <strong>Write code → Run it → Watch it execute line by line → Let AI catch what you missed</strong>
 </p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white" />
-  <img src="https://img.shields.io/badge/Node.js-Raw%20HTTP-339933?style=flat-square&logo=node.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=white" />
-  <img src="https://img.shields.io/badge/Claude%20AI-SSE%20Streaming-D4A97A?style=flat-square" />
-  <img src="https://img.shields.io/badge/Piston%20API-17%2B%20Languages-8AB87A?style=flat-square" />
-</p>
-
 ---
 
 ## What is CodeLens?
