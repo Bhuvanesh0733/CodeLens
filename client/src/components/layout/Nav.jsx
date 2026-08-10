@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import './Nav.css';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export default function Nav() {
   const location = useLocation();
