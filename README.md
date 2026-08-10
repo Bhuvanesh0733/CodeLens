@@ -3,7 +3,6 @@
 <p align="center">
   <strong>Write code → Run it → Watch it execute line by line → Let AI catch what you missed</strong>
 </p>
----
 
 ## What is CodeLens?
 
