@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import CodeEditor from '../components/editor/CodeEditor';
+import { saveStudioCode, addHistory } from '../utils/storage';
 import './CodeStudio.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -288,7 +289,13 @@ function VisualizerOverlay({ steps, currentStep, onStep, onPlay, onPause, onRese
 export default function CodeStudio() {
   const [language, setLanguage] = useState('javascript');
   const [code, setCode] = useState('');
-  const [mode, setMode] = useState('idle'); // idle | running | error | success | visualizing
+  const [mode, setMode] = useState('idle');
+
+  // Save code to localStorage whenever it changes (for cross-page retrieval)
+  const handleCodeChange = (val) => {
+    setCode(val);
+    saveStudioCode(val, language);
+  };
   const [output, setOutput] = useState('');
   const [stderr, setStderr] = useState('');
   const [exitCode, setExitCode] = useState(0);
@@ -340,6 +347,19 @@ export default function CodeStudio() {
 
       const isError = data.hasError || data.exitCode !== 0 || (!data.stdout && data.stderr);
       setMode(isError ? 'error' : 'success');
+
+      // Save to history
+      addHistory({
+        type: 'run',
+        language,
+        code: code.slice(0, 500),
+        filename: `main.${lang.ext}`,
+        output: (data.stdout || '').slice(0, 300),
+        stderr: (data.stderr || '').slice(0, 300),
+        exitCode: data.exitCode ?? 0,
+        hasError: isError,
+        summary: isError ? `Error — exit code ${data.exitCode}` : `Success`,
+      });
 
       // Auto-trigger AI if there's an error
       if (isError) {
@@ -535,7 +555,7 @@ export default function CodeStudio() {
         <div className="studio-editor-col">
           <CodeEditor
             value={code}
-            onChange={setCode}
+            onChange={handleCodeChange}
             language={language}
             highlightedLines={highlightedLines}
             activeLine={visActiveLine}

@@ -1,16 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import CodeEditor from '../components/editor/CodeEditor';
+import { getStudioCode, addHistory } from '../utils/storage';
 import './AIReview.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-
-const SNIPPET_EXAMPLES = [
-  { label: 'var closure bug', tag: 'Bug' },
-  { label: 'Bubble sort', tag: 'Algo' },
-  { label: 'Async/await', tag: 'Async' },
-  { label: 'Array methods', tag: 'Perf' },
-];
 
 const PHASE_ORDER = ['parsing', 'analyzing', 'reviewing', 'complete'];
 const PHASE_LABELS = {
@@ -101,10 +94,18 @@ export default function AIReview() {
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [activeLine, setActiveLine] = useState(null);
-  const [snippetOpen, setSnippetOpen] = useState(false);
+  const [studioInfo, setStudioInfo] = useState(null);
 
   const abortRef = useRef(null);
   const streamRef = useRef(null);
+
+  // Check if studio code is available
+  useEffect(() => {
+    const data = getStudioCode();
+    if (data?.code?.trim()) {
+      setStudioInfo(data);
+    }
+  }, []);
 
   const highlightedLines = result?.insights?.map(ins => ({
     line: ins.line,
@@ -182,20 +183,32 @@ export default function AIReview() {
     }
   };
 
-  // jQuery-style snippet loader (demonstrates $.ajax pattern with a fetch polyfill)
-  const loadSnippet = (label) => {
-    const snippets = {
-      'var closure bug': DEFAULT_CODE,
-      'Bubble sort': `function bubbleSort(arr) {\n  for (var i = 0; i < arr.length; i++) {\n    for (var j = 0; j < arr.length - i - 1; j++) {\n      if (arr[j] > arr[j + 1]) {\n        var temp = arr[j];\n        arr[j] = arr[j + 1];\n        arr[j + 1] = temp;\n      }\n    }\n  }\n  return arr;\n}`,
-      'Async/await': `async function fetchUser(id) {\n  const res = await fetch('/api/users/' + id);\n  const data = await res.json();\n  return data;\n}\n\n// Missing error handling\nfetchUser(1).then(user => console.log(user));`,
-      'Array methods': `// Inefficient data processing\nconst data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];\n\n// Using a for loop where map/filter would be cleaner\nvar result = [];\nfor (var i = 0; i < data.length; i++) {\n  if (data[i] % 2 === 0) {\n    result.push(data[i] * 2);\n  }\n}\nconsole.log(result);`,
-    };
-    setCode(snippets[label] || '');
-    setSnippetOpen(false);
-    setResult(null);
-    setStreamText('');
-    setPhase(null);
-    setError(null);
+  // Save result to localStorage history when review completes
+  useEffect(() => {
+    if (result && phase === 'complete') {
+      addHistory({
+        type: 'review',
+        language: result.language || 'javascript',
+        code: code.slice(0, 500),
+        filename: 'snippet.js',
+        summary: result.summary || 'AI Review complete',
+        overallScore: result.overallScore || 0,
+        insightCount: result.insights?.length || 0,
+        hasError: false,
+      });
+    }
+  }, [result, phase]);
+
+  // Retrieve code from Studio
+  const retrieveFromStudio = () => {
+    const data = getStudioCode();
+    if (data?.code?.trim()) {
+      setCode(data.code);
+      setResult(null);
+      setStreamText('');
+      setPhase(null);
+      setError(null);
+    }
   };
 
   const phaseIdx = PHASE_ORDER.indexOf(phase);
@@ -210,28 +223,16 @@ export default function AIReview() {
           <span className="section-label">Powered by Claude · Streamed via SSE</span>
         </div>
         <div className="review-topbar__right">
-          {/* jQuery-style snippet gallery */}
-          <div className="snippet-gallery">
+          {/* Retrieve from Studio button */}
+          {studioInfo?.code?.trim() && (
             <button
-              className="btn btn-ghost btn-sm snippet-gallery__trigger"
-              onClick={() => setSnippetOpen(!snippetOpen)}
+              className="btn btn-ghost btn-sm retrieve-studio-btn"
+              onClick={retrieveFromStudio}
+              title="Load the code you last wrote in Studio"
             >
-              Examples ↓
+              ↗ Retrieve from Studio
             </button>
-            {snippetOpen && (
-              <div className="snippet-gallery__dropdown">
-                <div className="snippet-gallery__header section-label">EXAMPLE SNIPPETS</div>
-                {SNIPPET_EXAMPLES.map(s => (
-                  <button key={s.label} className="snippet-item" onClick={() => loadSnippet(s.label)}>
-                    <span className={`label label-${s.tag === 'Bug' ? 'error' : s.tag === 'Perf' ? 'warning' : 'muted'}`}>
-                      {s.tag}
-                    </span>
-                    <span>{s.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          )}
 
           <button
             className="btn btn-primary review-submit-btn"

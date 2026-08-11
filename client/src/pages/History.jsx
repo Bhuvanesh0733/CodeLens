@@ -1,47 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { getHistory, clearHistory } from '../utils/storage';
 import './History.css';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-const TYPE_LABELS = {
-  review: 'AI Review',
-  execute: 'Run',
-  visualize: 'Visualize',
-};
-
 function ScoreBadge({ score }) {
+  if (score === undefined || score === null) return null;
   const cls = score >= 70 ? 'score--good' : score >= 40 ? 'score--mid' : 'score--low';
   return <span className={`history-score ${cls}`}>{score}</span>;
 }
 
-function StatusBadge({ hasError }) {
-  return (
-    <span className={`label ${hasError ? 'label-error' : 'label-accent'}`}>
-      {hasError ? 'Error' : 'Success'}
-    </span>
-  );
+function TypeIcon({ type }) {
+  if (type === 'run') return <span className="history-type-icon history-type-icon--run" title="Code Run">▶</span>;
+  if (type === 'review') return <span className="history-type-icon history-type-icon--review" title="AI Review">◈</span>;
+  return <span className="history-type-icon">•</span>;
 }
 
 export default function History() {
   const [history, setHistory] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/history`);
-        if (!res.ok) throw new Error('Failed to load history');
-        const data = await res.json();
-        setHistory(data.history || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHistory();
+    setHistory(getHistory());
   }, []);
 
   const formatTime = (ts) => {
@@ -52,7 +31,16 @@ export default function History() {
     return new Date(ts).toLocaleDateString();
   };
 
-  const reviewEntries = history.filter((h) => h.type === 'review' || h.overallScore !== undefined);
+  const handleClear = () => {
+    if (window.confirm('Clear all history? This cannot be undone.')) {
+      clearHistory();
+      setHistory([]);
+    }
+  };
+
+  const toggleExpand = (id) => {
+    setExpandedId(prev => prev === id ? null : id);
+  };
 
   return (
     <div className="history-page page-wrapper">
@@ -70,103 +58,127 @@ export default function History() {
             <Link to="/studio" className="btn btn-primary">
               Open Studio →
             </Link>
+            {history.length > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={handleClear}>
+                Clear All
+              </button>
+            )}
           </div>
         </div>
 
         <div className="line-h reveal" />
 
-        {/* Loading */}
-        {loading && (
-          <div className="history-loading">
-            {[1, 2, 3].map(i => (
-              <div key={i} className="history-skeleton shimmer" />
-            ))}
-          </div>
-        )}
-
-        {/* Error */}
-        {error && !loading && (
-          <div className="history-error reveal">
-            <span className="label label-error">Server unreachable</span>
-            <p>Could not load history from <code>localhost:3001</code>.</p>
-            <p className="history-error__hint">Make sure the CodeLens server is running.</p>
-          </div>
-        )}
-
         {/* Empty */}
-        {!loading && !error && history.length === 0 && (
+        {history.length === 0 && (
           <div className="history-empty reveal">
             <div className="history-empty__icon">◎</div>
-            <h2 className="history-empty__title">No activity yet</h2>
+            <h2 className="history-empty__title">No history yet</h2>
             <p className="history-empty__sub">
-              Head to Studio and run, visualize, or review some code. It will appear here.
+              Run code in Studio or use AI Review — every action is recorded here automatically.
             </p>
             <Link to="/studio" className="btn btn-ghost">Open Studio →</Link>
           </div>
         )}
 
         {/* History list */}
-        {!loading && history.length > 0 && (
+        {history.length > 0 && (
           <div className="history-list reveal">
             <div className="history-list__header">
-              <span>ANALYSIS</span>
               <span>TYPE</span>
-              <span>RESULT</span>
+              <span>DETAILS</span>
+              <span>SCORE</span>
+              <span>STATUS</span>
               <span>TIME</span>
             </div>
 
             {history.map((item, i) => (
-              <Link
-                key={item.id}
-                to="/studio"
-                className="history-item fade-in"
-                style={{ animationDelay: `${i * 60}ms` }}
-              >
-                <div className="history-item__main">
-                  <div className="history-item__name">{item.filename || 'snippet'}</div>
-                  <div className="history-item__summary">{item.summary}</div>
-                  <div className="history-item__code-preview">
-                    {item.code ? item.code.slice(0, 80) : ''}…
+              <div key={item.id} className="history-entry fade-in" style={{ animationDelay: `${i * 40}ms` }}>
+                <div
+                  className={`history-item ${expandedId === item.id ? 'history-item--expanded' : ''}`}
+                  onClick={() => toggleExpand(item.id)}
+                >
+                  <div className="history-item__type">
+                    <TypeIcon type={item.type} />
+                  </div>
+                  <div className="history-item__main">
+                    <div className="history-item__name">
+                      {item.filename || 'snippet'}
+                      <span className="history-item__lang">{item.language}</span>
+                    </div>
+                    <div className="history-item__summary">{item.summary || '—'}</div>
+                  </div>
+                  <div className="history-item__score">
+                    {item.type === 'review' ? <ScoreBadge score={item.overallScore} /> : <span className="history-score-na">—</span>}
+                  </div>
+                  <div className="history-item__status">
+                    {item.hasError ? (
+                      <span className="label label-error">Error</span>
+                    ) : item.type === 'review' ? (
+                      <span className="label label-accent">{item.insightCount || 0} issues</span>
+                    ) : (
+                      <span className="label label-success">OK</span>
+                    )}
+                  </div>
+                  <div className="history-item__time">
+                    {formatTime(item.timestamp)}
                   </div>
                 </div>
-                <div className="history-item__type">
-                  <span className="label label-muted">{TYPE_LABELS[item.type] || 'Review'}</span>
-                </div>
-                <div className="history-item__issues">
-                  {item.type === 'review' || item.overallScore !== undefined ? (
-                    <ScoreBadge score={item.overallScore ?? 0} />
-                  ) : (
-                    <StatusBadge hasError={item.hasError} />
-                  )}
-                </div>
-                <div className="history-item__time">
-                  {formatTime(item.timestamp)}
-                </div>
-              </Link>
+
+                {/* Expanded code preview */}
+                {expandedId === item.id && item.code && (
+                  <div className="history-expanded">
+                    <div className="history-expanded__header">
+                      <span className="section-label">CODE PREVIEW</span>
+                      <Link
+                        to={item.type === 'review' ? '/review' : '/studio'}
+                        className="btn btn-ghost btn-sm"
+                      >
+                        Open in {item.type === 'review' ? 'AI Review' : 'Studio'} →
+                      </Link>
+                    </div>
+                    <pre className="history-expanded__code">{item.code}</pre>
+                    {item.output && (
+                      <>
+                        <span className="section-label">OUTPUT</span>
+                        <pre className="history-expanded__output">{item.output}</pre>
+                      </>
+                    )}
+                    {item.stderr && (
+                      <>
+                        <span className="section-label" style={{ color: 'var(--error)' }}>STDERR</span>
+                        <pre className="history-expanded__stderr">{item.stderr}</pre>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}
 
         {/* Stats row */}
-        {!loading && history.length > 0 && (
+        {history.length > 0 && (
           <div className="history-stats reveal">
             <div className="history-stat">
               <span className="history-stat__val">{history.length}</span>
-              <span className="history-stat__label">Total Activity</span>
+              <span className="history-stat__label">Total Actions</span>
+            </div>
+            <div className="history-stat">
+              <span className="history-stat__val">{history.filter(h => h.type === 'run').length}</span>
+              <span className="history-stat__label">Code Runs</span>
+            </div>
+            <div className="history-stat">
+              <span className="history-stat__val">{history.filter(h => h.type === 'review').length}</span>
+              <span className="history-stat__label">AI Reviews</span>
             </div>
             <div className="history-stat">
               <span className="history-stat__val">
-                {reviewEntries.length > 0
-                  ? Math.round(reviewEntries.reduce((a, b) => a + (b.overallScore || 0), 0) / reviewEntries.length)
-                  : '—'}
+                {(() => {
+                  const reviews = history.filter(h => h.type === 'review' && h.overallScore);
+                  return reviews.length ? Math.round(reviews.reduce((a, b) => a + b.overallScore, 0) / reviews.length) : '—';
+                })()}
               </span>
-              <span className="history-stat__label">Avg Review Score</span>
-            </div>
-            <div className="history-stat">
-              <span className="history-stat__val">
-                {history.filter((h) => !h.hasError).length}
-              </span>
-              <span className="history-stat__label">Successful Runs</span>
+              <span className="history-stat__label">Avg Score</span>
             </div>
           </div>
         )}
