@@ -85,7 +85,8 @@
 }
 
 .lang-select option {
-    background: #1D1A12;
+    background: var(--bg-raised);
+    color: var(--text-primary);
 }
 
 .lang-select__arrow {
@@ -582,50 +583,15 @@
     bottom: 0;
     left: 0;
     right: 0;
-    max-height: 45%;
-    overflow-y: auto;
     background: rgba(14, 12, 9, 0.96);
     border-top: 1px solid var(--border-accent);
     backdrop-filter: blur(8px);
     padding: var(--space-4) var(--space-5);
-    padding-top: calc(var(--space-4) + 22px);
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
     z-index: 20;
     animation: slideUp 0.3s var(--ease-out);
-    transition: max-height 0.25s var(--ease-out);
-}
-
-.vis-overlay--expanded {
-    max-height: 78%;
-}
-
-.vis-expand-btn {
-    position: absolute;
-    top: var(--space-2);
-    left: 50%;
-    transform: translateX(-50%);
-    width: 44px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg-raised);
-    border: 1px solid var(--border-bright);
-    border-radius: 3px;
-    color: var(--text-secondary);
-    font-size: 13px;
-    line-height: 1;
-    cursor: pointer;
-    z-index: 21;
-    transition: color var(--duration-fast) ease, border-color var(--duration-fast) ease, background var(--duration-fast) ease;
-}
-
-.vis-expand-btn:hover {
-    color: var(--accent);
-    border-color: var(--accent);
-    background: var(--accent-dim);
 }
 
 @keyframes slideUp {
@@ -669,6 +635,7 @@
     border-radius: 2px;
     padding: 2px var(--space-3);
     animation: fadeIn 0.2s var(--ease-out);
+    transition: background var(--duration-fast) ease, border-color var(--duration-fast) ease;
 }
 
 .vis-var-name {
@@ -684,10 +651,84 @@
     font-weight: 600;
 }
 
+
+/* Highlight a variable whose value just changed at this step */
+
+.vis-var-row--changed {
+    background: rgba(255, 179, 71, 0.12);
+    border-color: var(--warning);
+}
+
+.vis-var-row--changed .vis-var-val {
+    color: var(--warning);
+}
+
 .vis-vars__empty {
     font-family: var(--font-code);
     font-size: 11px;
     color: var(--text-muted);
+}
+
+
+/* Call stack — one card per active function frame, innermost highlighted */
+
+.vis-frames {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.vis-frames__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.vis-frame {
+    border: 1px solid var(--border-bright);
+    border-radius: 3px;
+    background: var(--bg-raised);
+    padding: var(--space-2) var(--space-3);
+    opacity: 0.6;
+    transition: opacity var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+
+.vis-frame--active {
+    opacity: 1;
+    border-color: var(--accent);
+    background: rgba(255, 165, 90, 0.05);
+}
+
+.vis-frame__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2);
+}
+
+.vis-frame__name {
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.vis-frame--active .vis-frame__name {
+    color: var(--accent);
+}
+
+.vis-frame__line {
+    font-family: var(--font-code);
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.vis-frame__vars {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
 }
 
 

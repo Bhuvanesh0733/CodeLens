@@ -155,7 +155,7 @@ function VarRow({ name, value, changed }) {
   );
 }
 
-function VisualizerOverlay({ steps, currentStep, onStep, onPlay, onPause, onReset, isPlaying, speed, onSpeedChange, language, isExpanded, onToggleExpand }) {
+function VisualizerOverlay({ steps, currentStep, onStep, onPlay, onPause, onReset, isPlaying, speed, onSpeedChange, language }) {
   const step = steps[currentStep];
   const prevStep = currentStep > 0 ? steps[currentStep - 1] : null;
   if (!step) return null;
@@ -165,16 +165,7 @@ function VisualizerOverlay({ steps, currentStep, onStep, onPlay, onPause, onRese
   const hasVars = Object.keys(vars).length > 0;
 
   return (
-    <div className={`vis-overlay ${isExpanded ? 'vis-overlay--expanded' : ''}`}>
-      {/* Expand/collapse toggle — like VS Code's terminal maximize arrow */}
-      <button
-        className="vis-expand-btn"
-        onClick={onToggleExpand}
-        title={isExpanded ? 'Collapse panel' : 'Expand panel'}
-      >
-        {isExpanded ? '⌄' : '⌃'}
-      </button>
-
+    <div className="vis-overlay">
       {/* Call stack (Python) — one frame per active function call, innermost last */}
       {hasStack && (
         <div className="vis-frames">
@@ -341,7 +332,6 @@ export default function CodeStudio() {
   const [isVisPlaying, setIsVisPlaying] = useState(false);
   const [visSpeed, setVisSpeed] = useState(500);
   const [isVisFetching, setIsVisFetching] = useState(false);
-  const [isVisExpanded, setIsVisExpanded] = useState(false);
 
   const rafRef = useRef(null);
   const lastTimeRef = useRef(0);
@@ -355,7 +345,7 @@ export default function CodeStudio() {
     setMode('running');
     setOutput(''); setStderr(''); setExitCode(0);
     setAiPhase(null); setAiStream(''); setAiInsights(null);
-    setIsVisMode(false); setVisSteps([]); setIsVisExpanded(false);
+    setIsVisMode(false); setVisSteps([]);
 
     try {
       const res = await fetch(`${API_BASE}/api/execute`, {
@@ -550,7 +540,7 @@ export default function CodeStudio() {
           {/* Visualize */}
           <button
             className={`studio-btn studio-btn--vis ${isVisFetching ? 'loading' : ''} ${isVisMode ? 'active' : ''}`}
-            onClick={isVisMode ? () => { setIsVisMode(false); setIsVisExpanded(false); } : handleVisualize}
+            onClick={isVisMode ? () => setIsVisMode(false) : handleVisualize}
             disabled={!code.trim() || isVisFetching}
             title="Step through code line by line"
           >
@@ -605,8 +595,6 @@ export default function CodeStudio() {
               speed={visSpeed}
               onSpeedChange={setVisSpeed}
               language={language}
-              isExpanded={isVisExpanded}
-              onToggleExpand={() => setIsVisExpanded(v => !v)}
             />
           )}
         </div>
