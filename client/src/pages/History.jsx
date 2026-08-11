@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { getHistory, clearHistory } from '../utils/storage';
+import { getHistory, clearHistory, saveStudioCode } from '../utils/storage';
 import './History.css';
 
 function ScoreBadge({ score }) {
@@ -131,6 +131,8 @@ export default function History() {
                       <span className="section-label">CODE PREVIEW</span>
                       <Link
                         to={item.type === 'review' ? '/review' : '/studio'}
+                        state={{ code: item.code, language: item.language }}
+                        onClick={() => saveStudioCode(item.code, item.language)}
                         className="btn btn-ghost btn-sm"
                       >
                         Open in {item.type === 'review' ? 'AI Review' : 'Studio'} →

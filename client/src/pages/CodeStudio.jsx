@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import CodeEditor from '../components/editor/CodeEditor';
-import { saveStudioCode, addHistory } from '../utils/storage';
+import { saveStudioCode, addHistory, getStudioCode } from '../utils/storage';
 import './CodeStudio.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -287,9 +288,27 @@ function VisualizerOverlay({ steps, currentStep, onStep, onPlay, onPause, onRese
 }
 
 export default function CodeStudio() {
+  const location = useLocation();
   const [language, setLanguage] = useState('javascript');
   const [code, setCode] = useState('');
   const [mode, setMode] = useState('idle');
+
+  // Load code handed off from History (or a previous Studio session) on mount.
+  // Route state (set by History's "Open in Studio" link) takes priority since
+  // it reflects an explicit, immediate choice; storage is the fallback.
+  useEffect(() => {
+    if (location.state && location.state.code) {
+      setCode(location.state.code);
+      if (location.state.language) setLanguage(location.state.language);
+      return;
+    }
+    const stored = getStudioCode();
+    if (stored && stored.code && stored.code.trim()) {
+      setCode(stored.code);
+      if (stored.language) setLanguage(stored.language);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   // Save code to localStorage whenever it changes (for cross-page retrieval)
   const handleCodeChange = (val) => {
@@ -352,7 +371,7 @@ export default function CodeStudio() {
       addHistory({
         type: 'run',
         language,
-        code: code.slice(0, 500),
+        code: code.slice(0, 20000),
         filename: `main.${lang.ext}`,
         output: (data.stdout || '').slice(0, 300),
         stderr: (data.stderr || '').slice(0, 300),

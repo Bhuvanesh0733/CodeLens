@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import CodeEditor from '../components/editor/CodeEditor';
 import { getStudioCode, addHistory } from '../utils/storage';
 import './AIReview.css';
@@ -87,6 +88,7 @@ function SystemDiagram({ phase }) {
 }
 
 export default function AIReview() {
+  const location = useLocation();
   const [code, setCode] = useState('');
   const [phase, setPhase] = useState(null);
   const [streamText, setStreamText] = useState('');
@@ -99,13 +101,20 @@ export default function AIReview() {
   const abortRef = useRef(null);
   const streamRef = useRef(null);
 
-  // Check if studio code is available
+  // If arriving from History with code already chosen, load it immediately —
+  // no need to make the person click "Retrieve from Studio" for something
+  // they already explicitly picked.
   useEffect(() => {
+    if (location.state && location.state.code) {
+      setCode(location.state.code);
+      return;
+    }
     const data = getStudioCode();
     if (data?.code?.trim()) {
       setStudioInfo(data);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const highlightedLines = result?.insights?.map(ins => ({
     line: ins.line,
@@ -189,7 +198,7 @@ export default function AIReview() {
       addHistory({
         type: 'review',
         language: result.language || 'javascript',
-        code: code.slice(0, 500),
+        code: code.slice(0, 20000),
         filename: 'snippet.js',
         summary: result.summary || 'AI Review complete',
         overallScore: result.overallScore || 0,

@@ -3,18 +3,18 @@ const history = [];
 const MAX_HISTORY = 50;
 
 function addToHistory(entry) {
-  history.unshift(entry); // newest first
-  if (history.length > MAX_HISTORY) {
-    history.pop();
-  }
+    history.unshift(entry); // newest first
+    if (history.length > MAX_HISTORY) {
+        history.pop();
+    }
 }
 
 function getHistory() {
-  return [...history];
+    return [...history];
 }
 
 function getHistoryEntry(id) {
-  return history.find((h) => h.id === id) || null;
+    return history.find((h) => h.id === id) || null;
 }
 
 module.exports = { addToHistory, getHistory, getHistoryEntry };
