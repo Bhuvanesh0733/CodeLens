@@ -4,7 +4,7 @@ const { addToHistory } = require('./history');
 // ─── Language-specific instrumentation ───────────────────────────────────────
 
 function instrumentPython(code) {
-    const wrapper = `import sys, json as _json
+    const prefix = `import sys, json as _json
 
 _original_print = print
 
@@ -53,13 +53,20 @@ def _tracer(frame, event, arg):
 
 sys.settrace(_tracer)
 try:
-${code.split('\n').map(l => '    ' + l).join('\n')}
+`;
+    // Number of lines injected before the user's own code starts. Python's
+    // frame.f_lineno counts from the top of this WHOLE file (our plumbing +
+    // the user's code), not from line 1 of what the user actually wrote —
+    // this offset lets us translate reported line numbers back correctly.
+    const offset = prefix.split('\n').length - 1;
+
+    const wrapper = prefix + code.split('\n').map(l => '    ' + l).join('\n') + `
 except Exception as _e:
     _original_print(_json.dumps({'t':'error','msg':str(_e),'line':0}), flush=True)
 finally:
     sys.settrace(None)
 `;
-    return wrapper;
+    return { wrapper, offset };
 }
 
 // Mask out string/comment contents on a single line so brace-counting and
@@ -189,7 +196,8 @@ function __trace(l, v) {
 }
 
 // ─── Parse local run output for trace steps ──────────────────────────────────
-function parseTraceOutput(rawOutput, language, totalLines) {
+function parseTraceOutput(rawOutput, language, totalLines, offset) {
+    offset = offset || 0;
     const steps = [];
     const lines = rawOutput.split('\n');
     let outputSoFar = '';
@@ -200,11 +208,13 @@ function parseTraceOutput(rawOutput, language, totalLines) {
         try {
             const obj = JSON.parse(trimmed);
             if (obj.t === 'trace') {
+                const correctedLine = obj.l - offset;
                 if (obj.stack) {
-                    const innermost = obj.stack[obj.stack.length - 1] || { vars: {} };
-                    steps.push({ line: obj.l, vars: innermost.vars || {}, stack: obj.stack, output: outputSoFar });
+                    const correctedStack = obj.stack.map(f => Object.assign({}, f, { line: f.line - offset }));
+                    const innermost = correctedStack[correctedStack.length - 1] || { vars: {} };
+                    steps.push({ line: correctedLine, vars: innermost.vars || {}, stack: correctedStack, output: outputSoFar });
                 } else {
-                    steps.push({ line: obj.l, vars: obj.v || {}, output: outputSoFar });
+                    steps.push({ line: correctedLine, vars: obj.v || {}, output: outputSoFar });
                 }
             } else if (obj.t === 'out') {
                 outputSoFar += (outputSoFar ? '\n' : '') + obj.s;
@@ -257,9 +267,12 @@ async function handleVisualize(req, res) {
         const totalLines = code.split('\n').length;
         const TRACEABLE = ['javascript', 'python'];
         let instrumentedCode = code;
+        let lineOffset = 0;
 
         if (language === 'python') {
-            instrumentedCode = instrumentPython(code);
+            const result = instrumentPython(code);
+            instrumentedCode = result.wrapper;
+            lineOffset = result.offset;
         } else if (language === 'javascript') {
             instrumentedCode = instrumentJavaScript(code);
         }
@@ -278,7 +291,7 @@ async function handleVisualize(req, res) {
 
             let steps;
             if (TRACEABLE.indexOf(language) !== -1) {
-                steps = parseTraceOutput(rawOutput, language, totalLines);
+                steps = parseTraceOutput(rawOutput, language, totalLines, lineOffset);
             } else {
                 // Non-instrumented language: run the ORIGINAL code (not instrumentedCode,
                 // since only javascript/python get real instrumentation) and build a
@@ -317,7 +330,7 @@ async function handleVisualize(req, res) {
                 type: 'visualize',
                 filename: `main.${extFor(language)}`,
                 language,
-                code: code.slice(0, 500),
+                code: code.slice(0, 20000),
                 summary: hasError ? 'Visualized with an error' : `Visualized · ${steps.length} steps`,
                 hasError,
                 timestamp: Date.now(),
