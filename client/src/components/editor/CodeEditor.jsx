@@ -131,7 +131,14 @@ export default function CodeEditor({
 
   const handleChange = (e) => {
     if (onChange) onChange(e.target.value);
+    // Force immediate scroll sync after input
+    requestAnimationFrame(syncScroll);
   };
+
+  // Re-sync scroll whenever content changes (paste, undo, etc.)
+  useEffect(() => {
+    syncScroll();
+  }, [value]);
 
   const handleKeyDown = (e) => {
     // Tab support
