@@ -332,6 +332,7 @@ export default function CodeStudio() {
   const [isVisPlaying, setIsVisPlaying] = useState(false);
   const [visSpeed, setVisSpeed] = useState(500);
   const [isVisFetching, setIsVisFetching] = useState(false);
+  const [filenameBase, setFilenameBase] = useState('main');
 
   const rafRef = useRef(null);
   const lastTimeRef = useRef(0);
@@ -372,7 +373,7 @@ export default function CodeStudio() {
         type: 'run',
         language,
         code: code.slice(0, 20000),
-        filename: `main.${lang.ext}`,
+        filename: `${filenameBase}.${lang.ext}`,
         output: (data.stdout || '').slice(0, 300),
         stderr: (data.stderr || '').slice(0, 300),
         exitCode: data.exitCode ?? 0,
@@ -410,7 +411,7 @@ export default function CodeStudio() {
       const res = await fetch(`${API_BASE}/api/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: codeToReview, language, filename: `main.${lang.ext}` }),
+        body: JSON.stringify({ code: codeToReview, language, filename: `${filenameBase}.${lang.ext}` }),
         signal: controller.signal,
       });
 
@@ -533,14 +534,25 @@ export default function CodeStudio() {
             <span className="lang-select__arrow">▾</span>
           </div>
 
-          <span className="studio-bar__filename">main.{lang.ext}</span>
+          <input
+            className="studio-bar__filename studio-bar__filename--input"
+            value={filenameBase}
+            onChange={e => {
+              // strip anything that isn't safe in a filename, no spaces/slashes
+              const clean = e.target.value.replace(/[^a-zA-Z0-9_-]/g, '');
+              setFilenameBase(clean || 'main');
+            }}
+            spellCheck={false}
+            title="Click to rename — this name is used when saved to History"
+          />
+          <span className="studio-bar__ext">.{lang.ext}</span>
         </div>
 
         <div className="studio-bar__right">
           {/* Visualize */}
           <button
             className={`studio-btn studio-btn--vis ${isVisFetching ? 'loading' : ''} ${isVisMode ? 'active' : ''}`}
-            onClick={isVisMode ? () => setIsVisMode(false) : handleVisualize}
+            onClick={isVisMode ? () => { setIsVisMode(false); } : handleVisualize}
             disabled={!code.trim() || isVisFetching}
             title="Step through code line by line"
           >
@@ -570,7 +582,7 @@ export default function CodeStudio() {
 
       {/* ── MAIN WORKSPACE ── */}
       <div className="studio-workspace">
-        {/* Editor column */}
+        {/* Editor column — always just the code, full height */}
         <div className="studio-editor-col">
           <CodeEditor
             value={code}
@@ -581,54 +593,61 @@ export default function CodeStudio() {
             height="100%"
             placeholder={`// Write your ${lang.label} code here…\n// Hit Run to execute · Hit Visualize to step through line by line`}
           />
-
-          {/* Visualizer overlay panel */}
-          {isVisMode && visSteps.length > 0 && (
-            <VisualizerOverlay
-              steps={visSteps}
-              currentStep={visStep}
-              onStep={setVisStep}
-              onPlay={() => { if (visStep >= visSteps.length - 1) setVisStep(0); setIsVisPlaying(true); }}
-              onPause={() => setIsVisPlaying(false)}
-              onReset={() => { setIsVisPlaying(false); setVisStep(0); }}
-              isPlaying={isVisPlaying}
-              speed={visSpeed}
-              onSpeedChange={setVisSpeed}
-              language={language}
-            />
-          )}
         </div>
 
-        {/* Output column */}
-        <div className="studio-output-col">
-          <div className="studio-output-header">
-            <span className="section-label">OUTPUT</span>
-            {mode !== 'idle' && mode !== 'running' && (
-              <div className="studio-output-actions">
-                <button
-                  className="studio-output-action-btn"
-                  onClick={() => triggerAIReview('', false)}
-                  disabled={isAiLoading}
-                  title="Ask AI to review this code"
-                >
-                  {isAiLoading ? <><span className="studio-btn__spinner" />Reviewing…</> : <>◈ AI Review</>}
-                </button>
-              </div>
-            )}
+        {/* Right column — Visualizer panel while stepping through code, Output otherwise */}
+        {isVisMode && visSteps.length > 0 ? (
+          <div className="studio-vis-col">
+            <div className="studio-vis-col__header">
+              <span className="section-label">VISUALIZER</span>
+              <span className="label label-muted">{visStep + 1} / {visSteps.length}</span>
+            </div>
+            <div className="studio-vis-col__body thin-scroll">
+              <VisualizerOverlay
+                steps={visSteps}
+                currentStep={visStep}
+                onStep={setVisStep}
+                onPlay={() => { if (visStep >= visSteps.length - 1) setVisStep(0); setIsVisPlaying(true); }}
+                onPause={() => setIsVisPlaying(false)}
+                onReset={() => { setIsVisPlaying(false); setVisStep(0); }}
+                isPlaying={isVisPlaying}
+                speed={visSpeed}
+                onSpeedChange={setVisSpeed}
+                language={language}
+              />
+            </div>
           </div>
-          <div className="studio-output-body thin-scroll">
-            <OutputPanel
-              mode={mode}
-              output={output}
-              stderr={stderr}
-              exitCode={exitCode}
-              aiPhase={aiPhase}
-              aiStream={aiStream}
-              aiInsights={aiInsights}
-              onAIReview={() => triggerAIReview(stderr || output, false)}
-            />
+        ) : (
+          <div className="studio-output-col">
+            <div className="studio-output-header">
+              <span className="section-label">OUTPUT</span>
+              {mode !== 'idle' && mode !== 'running' && (
+                <div className="studio-output-actions">
+                  <button
+                    className="studio-output-action-btn"
+                    onClick={() => triggerAIReview('', false)}
+                    disabled={isAiLoading}
+                    title="Ask AI to review this code"
+                  >
+                    {isAiLoading ? <><span className="studio-btn__spinner" />Reviewing…</> : <>◈ AI Review</>}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="studio-output-body thin-scroll">
+              <OutputPanel
+                mode={mode}
+                output={output}
+                stderr={stderr}
+                exitCode={exitCode}
+                aiPhase={aiPhase}
+                aiStream={aiStream}
+                aiInsights={aiInsights}
+                onAIReview={() => triggerAIReview(stderr || output, false)}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
