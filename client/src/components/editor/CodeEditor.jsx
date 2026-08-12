@@ -114,6 +114,7 @@ export default function CodeEditor({
 }) {
   const textareaRef = useRef(null);
   const highlightRef = useRef(null);
+  const gutterRef = useRef(null);
   const [lines, setLines] = useState([]);
   const [cursorLine, setCursorLine] = useState(1);
 
@@ -121,11 +122,18 @@ export default function CodeEditor({
     setLines(value.split('\n'));
   }, [value]);
 
-  // Sync scroll between textarea and highlight layer
+  // Sync scroll between textarea, highlight layer, and the line-number gutter.
+  // Without syncing the gutter too, it stays pinned at scrollTop 0 while the
+  // textarea/highlight scroll away underneath it — so the visible numbers
+  // (still 1, 2, 3…) end up lined up with whatever code has scrolled into
+  // view, instead of that code's real line numbers.
   const syncScroll = () => {
     if (highlightRef.current && textareaRef.current) {
       highlightRef.current.scrollTop = textareaRef.current.scrollTop;
       highlightRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+    if (gutterRef.current && textareaRef.current) {
+      gutterRef.current.scrollTop = textareaRef.current.scrollTop;
     }
   };
 
@@ -169,7 +177,7 @@ export default function CodeEditor({
   return (
     <div className="code-editor" style={{ height }}>
       {/* Line numbers */}
-      <div className="code-editor__gutter">
+      <div className="code-editor__gutter" ref={gutterRef}>
         {Array.from({ length: lineCount }, (_, i) => {
           const lineNum = i + 1;
           const annotation = getLineAnnotation(lineNum);
