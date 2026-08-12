@@ -148,6 +148,33 @@ export default function CodeEditor({
     syncScroll();
   }, [value]);
 
+  // Keep the active line (used by the visualizer to show the current
+  // execution step) scrolled into view. Without this, the gutter/highlight
+  // correctly mark line 47 as active, but if the editor happens to be
+  // scrolled to lines 1-35, that highlight is simply off-screen and it
+  // looks like nothing is happening.
+  useEffect(() => {
+    if (activeLine == null) return;
+    const container = textareaRef.current;
+    const rowEl = highlightRef.current?.children[activeLine - 1];
+    if (!container || !rowEl) return;
+
+    const viewTop = container.scrollTop;
+    const viewBottom = viewTop + container.clientHeight;
+    const rowTop = rowEl.offsetTop;
+    const rowBottom = rowTop + rowEl.offsetHeight;
+
+    // Only scroll if the active line isn't already fully visible.
+    if (rowTop < viewTop || rowBottom > viewBottom) {
+      const target = Math.max(0, rowTop - container.clientHeight / 2);
+      container.scrollTo({ top: target, behavior: 'smooth' });
+      // scrollTo fires 'scroll' events as it animates, which keeps
+      // syncScroll running, but sync once immediately too in case the
+      // browser coalesces those events.
+      syncScroll();
+    }
+  }, [activeLine]);
+
   const handleKeyDown = (e) => {
     // Tab support
     if (e.key === 'Tab') {
