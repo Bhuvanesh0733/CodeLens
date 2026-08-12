@@ -8,6 +8,17 @@ function instrumentPython(code) {
 
 _original_print = print
 
+# Any frame whose CURRENT line is below this number belongs to this
+# instrumentation harness itself, not to the user's code. It gets set to
+# its real value right before 'try:' below, once we know exactly which
+# physical line the user's code starts on. Used instead of a name check
+# (e.g. "does this frame's name start with '_'") because helpers like
+# _print_patched below use a generator expression internally
+# (str(a) for a in args) -- and a <genexpr> frame doesn't start with
+# '_', so a name-only filter lets it leak through and get reported with
+# a line number from this prefix, not from the user's file.
+_USER_CODE_START = 0
+
 def _print_patched(*args, **kwargs):
     s = ' '.join(str(a) for a in args)
     _original_print(_json.dumps({'t':'out','s':s}), flush=True)
@@ -22,8 +33,8 @@ def _collect_stack(frame):
             base = f.f_code.co_filename.replace('\\\\', '/').split('/')[-1]
         except:
             base = ''
-        name = f.f_code.co_name
-        if base == 'main.py' and not name.startswith('_'):
+        if base == 'main.py' and f.f_lineno >= _USER_CODE_START:
+            name = f.f_code.co_name
             display_name = 'main' if name == '<module>' else name
             locs = {}
             for k, v in f.f_locals.items():
@@ -43,8 +54,7 @@ def _tracer(frame, event, arg):
         base = frame.f_code.co_filename.replace('\\\\', '/').split('/')[-1]
     except:
         base = ''
-    name = frame.f_code.co_name
-    if base != 'main.py' or name.startswith('_'):
+    if base != 'main.py' or frame.f_lineno < _USER_CODE_START:
         return None
     if event == 'line':
         stack = _collect_stack(frame)
@@ -52,7 +62,7 @@ def _tracer(frame, event, arg):
     return _tracer
 
 sys.settrace(_tracer)
-_original_print(_json.dumps({'t':'marker','l':sys._getframe().f_lineno}), flush=True)
+_original_print(_json.dumps({'t':'marker','l':sys._getframe().f_lineno}), flush=True); _USER_CODE_START = sys._getframe().f_lineno + 2
 try:
 `;
     // We no longer try to manually count lines in the JS template above (that
