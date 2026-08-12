@@ -6,6 +6,7 @@ import Landing from './pages/Landing';
 import CodeStudio from './pages/CodeStudio';
 import AIReview from './pages/AIReview';
 import History from './pages/History';
+import Login from './pages/Login';
 import './App.css';
 
 // Watches for elements with the `.reveal` class and adds `.visible` once
@@ -63,6 +64,7 @@ function AppShell() {
         <Route path="/visualizer" element={<CodeStudio />} />
         <Route path="/review" element={<AIReview />} />
         <Route path="/history" element={<History />} />
+        <Route path="/login" element={<Login />} />
         <Route path="*" element={
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', gap: 'var(--space-4)', fontFamily: 'var(--font-display)' }}>
             <span style={{ fontFamily: 'var(--font-code)', color: 'var(--text-muted)', fontSize: '4rem', fontWeight: 700 }}>404</span>

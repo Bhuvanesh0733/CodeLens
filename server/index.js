@@ -4,6 +4,7 @@ const { handleReview } = require('./routes/review');
 const { handleExecute } = require('./routes/execute');
 const { handleVisualize } = require('./routes/visualize');
 const { getHistory } = require('./routes/history');
+const { handleGoogleAuth } = require('./routes/auth');
 const { reviewEmitter, getStats } = require('./events/emitter');
 
 const PORT = process.env.PORT || 3001;
@@ -57,6 +58,12 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // ── POST /api/auth/google ── verify Google Sign-In token, issue session ──
+    if (path === '/api/auth/google' && req.method === 'POST') {
+        handleGoogleAuth(req, res);
+        return;
+    }
+
     // ── GET /api/history ──
     if (path === '/api/history' && req.method === 'GET') {
         const history = getHistory();
@@ -100,6 +107,7 @@ server.listen(PORT, () => {
     console.log('  ║  POST /api/execute   — run any language  ║');
     console.log('  ║  POST /api/visualize — line-by-line trace║');
     console.log('  ║  POST /api/review    — AI code review    ║');
+    console.log('  ║  POST /api/auth/google — Google sign-in  ║');
     console.log('  ║  GET  /api/history   — review history    ║');
     console.log('  ║  GET  /api/events    — SSE live stats    ║');
     console.log('  ╚══════════════════════════════════════════╝');
@@ -109,6 +117,16 @@ server.listen(PORT, () => {
         console.warn('     (AI Review will show an error without it)');
     } else {
         console.log('  ✓  Groq API key loaded');
+    }
+    if (!process.env.GOOGLE_CLIENT_ID) {
+        console.warn('  ⚠  GOOGLE_CLIENT_ID not set — add it to server/.env');
+        console.warn('     (Google Sign-In will show an error without it)');
+    } else {
+        console.log('  ✓  Google Client ID loaded');
+    }
+    if (!process.env.JWT_SECRET) {
+        console.warn('  ⚠  JWT_SECRET not set — add it to server/.env');
+        console.warn('     (any random long string works, e.g. openssl rand -hex 32)');
     }
     console.log('');
 });

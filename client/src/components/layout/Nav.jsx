@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { getAuth, clearAuth, onAuthChange } from '../../utils/auth';
 import './Nav.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -9,6 +10,30 @@ export default function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const [reviewsToday, setReviewsToday] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [auth, setAuth] = useState(() => getAuth());
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Nav is mounted once for the whole app and never remounts on route
+  // changes, so it needs to be told explicitly when sign-in/sign-out
+  // happens elsewhere (e.g. the Login page).
+  useEffect(() => {
+    return onAuthChange(() => setAuth(getAuth()));
+  }, []);
+
+  const handleSignOut = () => {
+    clearAuth();
+    setUserMenuOpen(false);
+  };
+
+  // Close the user dropdown on outside click
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const onClick = (e) => {
+      if (!e.target.closest('.nav__user')) setUserMenuOpen(false);
+    };
+    document.addEventListener('click', onClick);
+    return () => document.removeEventListener('click', onClick);
+  }, [userMenuOpen]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30);
@@ -71,6 +96,33 @@ export default function Nav() {
           <Link to="/review" className="btn btn-primary btn-sm nav__cta">
             Launch
           </Link>
+
+          {/* Auth state */}
+          {auth?.user ? (
+            <div className="nav__user">
+              <button className="nav__user-trigger" onClick={() => setUserMenuOpen(v => !v)}>
+                {auth.user.picture ? (
+                  <img src={auth.user.picture} alt={auth.user.name} className="nav__user-avatar" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="nav__user-avatar nav__user-avatar--fallback">
+                    {(auth.user.name || '?').charAt(0).toUpperCase()}
+                  </span>
+                )}
+                <span className="nav__user-name">{auth.user.name?.split(' ')[0]}</span>
+              </button>
+              {userMenuOpen && (
+                <div className="nav__user-menu">
+                  <div className="nav__user-menu-email">{auth.user.email}</div>
+                  <button className="nav__user-menu-signout" onClick={handleSignOut}>Sign out</button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link to="/login" className="btn btn-ghost btn-sm nav__signin">
+              Sign In
+            </Link>
+          )}
+
           <button
             className={`nav__hamburger ${menuOpen ? 'open' : ''}`}
             onClick={() => setMenuOpen(!menuOpen)}

@@ -1,0 +1,88 @@
+.login-page {
+    min-height: calc(100vh - var(--nav-height));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-3);
+    padding: var(--space-10) var(--space-8);
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.login-title {
+    font-family: var(--font-display);
+    font-size: var(--text-xxl);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-top: var(--space-2);
+}
+
+.login-sub {
+    font-size: var(--text-base);
+    color: var(--text-secondary);
+    line-height: 1.6;
+    max-width: 34ch;
+    margin-bottom: var(--space-4);
+}
+
+.login-google-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    width: 100%;
+}
+
+.login-google-btn {
+    display: flex;
+    justify-content: center;
+}
+
+.login-loading {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-family: var(--font-code);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+}
+
+.login-error {
+    font-family: var(--font-code);
+    font-size: var(--text-xs);
+    color: var(--error);
+    background: var(--error-dim);
+    border: 1px solid var(--error);
+    border-radius: 3px;
+    padding: var(--space-3) var(--space-4);
+    line-height: 1.6;
+}
+
+.login-error code {
+    color: var(--error);
+    font-weight: 600;
+}
+
+.login-back {
+    margin-top: var(--space-6);
+    font-family: var(--font-code);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    transition: color var(--duration-fast) ease;
+}
+
+.login-back:hover {
+    color: var(--accent);
+}
