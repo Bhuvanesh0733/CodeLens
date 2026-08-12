@@ -581,7 +581,7 @@ export default function CodeStudio() {
       </div>
 
       {/* ── MAIN WORKSPACE ── */}
-      <div className="studio-workspace">
+      <div className={`studio-workspace ${isVisMode && visSteps.length > 0 ? 'studio-workspace--vis' : ''}`}>
         {/* Editor column — always just the code, full height */}
         <div className="studio-editor-col">
           <CodeEditor

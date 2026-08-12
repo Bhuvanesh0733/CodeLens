@@ -203,6 +203,15 @@
 }
 
 
+/* Visualizer needs more room than plain Output — call stack cards and
+     variable chips need breathing room, so it eats a bit into the editor's
+     space rather than sharing Output's narrower width. */
+
+.studio-workspace--vis {
+    grid-template-columns: 1fr 560px;
+}
+
+
 /* Editor column */
 
 .studio-editor-col {

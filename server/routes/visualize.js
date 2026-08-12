@@ -52,21 +52,22 @@ def _tracer(frame, event, arg):
     return _tracer
 
 sys.settrace(_tracer)
+_original_print(_json.dumps({'t':'marker','l':sys._getframe().f_lineno}), flush=True)
 try:
 `;
-    // Number of lines injected before the user's own code starts. Python's
-    // frame.f_lineno counts from the top of this WHOLE file (our plumbing +
-    // the user's code), not from line 1 of what the user actually wrote —
-    // this offset lets us translate reported line numbers back correctly.
-    const offset = prefix.split('\n').length - 1;
-
+    // We no longer try to manually count lines in the JS template above (that
+    // approach kept drifting out of sync). Instead, the '_original_print(...
+    // marker...)' line just before 'try:' reports ITS OWN real physical line
+    // number at runtime, computed by Python itself — that's used downstream
+    // to work out exactly where the user's code starts, so it can never
+    // drift out of sync with this template again.
     const wrapper = prefix + code.split('\n').map(l => '    ' + l).join('\n') + `
 except Exception as _e:
     _original_print(_json.dumps({'t':'error','msg':str(_e),'line':0}), flush=True)
 finally:
     sys.settrace(None)
 `;
-    return { wrapper, offset };
+    return { wrapper };
 }
 
 // Mask out string/comment contents on a single line so brace-counting and
@@ -196,18 +197,23 @@ function __trace(l, v) {
 }
 
 // ─── Parse local run output for trace steps ──────────────────────────────────
-function parseTraceOutput(rawOutput, language, totalLines, offset) {
-    offset = offset || 0;
+function parseTraceOutput(rawOutput, language, totalLines) {
     const steps = [];
     const lines = rawOutput.split('\n');
     let outputSoFar = '';
+    let offset = 0; // set once we see the runtime marker (Python only)
 
     for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed) continue;
         try {
             const obj = JSON.parse(trimmed);
-            if (obj.t === 'trace') {
+            if (obj.t === 'marker') {
+                // The marker line itself sits 2 physical lines before the
+                // user's own line 1 (marker line, then 'try:', then line 1) —
+                // so subtracting (marker's own line + 1) lands exactly on 1.
+                offset = obj.l + 1;
+            } else if (obj.t === 'trace') {
                 const correctedLine = obj.l - offset;
                 if (obj.stack) {
                     const correctedStack = obj.stack.map(f => Object.assign({}, f, { line: f.line - offset }));
@@ -267,12 +273,9 @@ async function handleVisualize(req, res) {
         const totalLines = code.split('\n').length;
         const TRACEABLE = ['javascript', 'python'];
         let instrumentedCode = code;
-        let lineOffset = 0;
 
         if (language === 'python') {
-            const result = instrumentPython(code);
-            instrumentedCode = result.wrapper;
-            lineOffset = result.offset;
+            instrumentedCode = instrumentPython(code).wrapper;
         } else if (language === 'javascript') {
             instrumentedCode = instrumentJavaScript(code);
         }
@@ -291,7 +294,7 @@ async function handleVisualize(req, res) {
 
             let steps;
             if (TRACEABLE.indexOf(language) !== -1) {
-                steps = parseTraceOutput(rawOutput, language, totalLines, lineOffset);
+                steps = parseTraceOutput(rawOutput, language, totalLines);
             } else {
                 // Non-instrumented language: run the ORIGINAL code (not instrumentedCode,
                 // since only javascript/python get real instrumentation) and build a
