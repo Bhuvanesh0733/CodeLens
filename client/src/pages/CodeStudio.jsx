@@ -536,7 +536,12 @@ export default function CodeStudio() {
             onChange={e => {
               // strip anything that isn't safe in a filename, no spaces/slashes
               const clean = e.target.value.replace(/[^a-zA-Z0-9_-]/g, '');
-              setFilenameBase(clean || 'main');
+              setFilenameBase(clean); // allow it to be empty WHILE the person is still typing
+            }}
+            onBlur={() => {
+              // only fall back to a default once they're done editing and
+              // actually left it empty — not on every keystroke
+              if (!filenameBase.trim()) setFilenameBase('main');
             }}
             spellCheck={false}
             title="Click to rename — this name is used when saved to History"
