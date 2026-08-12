@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import CodeEditor from '../components/editor/CodeEditor';
-import { saveStudioCode, addHistory, getStudioCode } from '../utils/storage';
+import { saveStudioCode, addHistory } from '../utils/storage';
 import './CodeStudio.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -293,24 +293,20 @@ export default function CodeStudio() {
   const [code, setCode] = useState('');
   const [mode, setMode] = useState('idle');
 
-  // Load code handed off from History (or a previous Studio session) on mount.
-  // Route state (set by History's "Open in Studio" link) takes priority since
-  // it reflects an explicit, immediate choice; storage is the fallback.
+  // Only prefill the editor when arriving from an explicit choice — i.e.
+  // History's "Open in Studio" link, which passes code via route state. A
+  // plain visit/refresh of Studio always starts blank, on purpose.
   useEffect(() => {
     if (location.state && location.state.code) {
       setCode(location.state.code);
       if (location.state.language) setLanguage(location.state.language);
-      return;
-    }
-    const stored = getStudioCode();
-    if (stored && stored.code && stored.code.trim()) {
-      setCode(stored.code);
-      if (stored.language) setLanguage(stored.language);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
-  // Save code to localStorage whenever it changes (for cross-page retrieval)
+  // Still save code to storage as you type — AI Review's "Retrieve from
+  // Studio" button depends on this being available, even though Studio
+  // itself no longer auto-loads it back in on a plain visit.
   const handleCodeChange = (val) => {
     setCode(val);
     saveStudioCode(val, language);
