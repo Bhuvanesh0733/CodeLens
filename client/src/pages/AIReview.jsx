@@ -6,6 +6,26 @@ import './AIReview.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+const LANGUAGES = [
+  { id: 'javascript', label: 'JavaScript', ext: 'js' },
+  { id: 'typescript', label: 'TypeScript', ext: 'ts' },
+  { id: 'python',     label: 'Python',     ext: 'py' },
+  { id: 'java',       label: 'Java',       ext: 'java' },
+  { id: 'c',          label: 'C',          ext: 'c' },
+  { id: 'cpp',        label: 'C++',        ext: 'cpp' },
+  { id: 'csharp',     label: 'C#',         ext: 'cs' },
+  { id: 'go',         label: 'Go',         ext: 'go' },
+  { id: 'rust',       label: 'Rust',       ext: 'rs' },
+  { id: 'ruby',       label: 'Ruby',       ext: 'rb' },
+  { id: 'php',        label: 'PHP',        ext: 'php' },
+  { id: 'swift',      label: 'Swift',      ext: 'swift' },
+  { id: 'kotlin',     label: 'Kotlin',     ext: 'kt' },
+  { id: 'bash',       label: 'Bash',       ext: 'sh' },
+  { id: 'r',          label: 'R',          ext: 'r' },
+  { id: 'lua',        label: 'Lua',        ext: 'lua' },
+  { id: 'perl',       label: 'Perl',       ext: 'pl' },
+];
+
 const PHASE_ORDER = ['parsing', 'analyzing', 'reviewing', 'complete'];
 const PHASE_LABELS = {
   parsing:   'Parsing structure…',
@@ -90,6 +110,7 @@ function SystemDiagram({ phase }) {
 export default function AIReview() {
   const location = useLocation();
   const [code, setCode] = useState('');
+  const [language, setLanguage] = useState('javascript');
   const [phase, setPhase] = useState(null);
   const [streamText, setStreamText] = useState('');
   const [result, setResult] = useState(null);
@@ -100,6 +121,7 @@ export default function AIReview() {
 
   const abortRef = useRef(null);
   const streamRef = useRef(null);
+  const lang = LANGUAGES.find(l => l.id === language) || LANGUAGES[0];
 
   // If arriving from History with code already chosen, load it immediately —
   // no need to make the person click "Retrieve from Studio" for something
@@ -107,6 +129,7 @@ export default function AIReview() {
   useEffect(() => {
     if (location.state && location.state.code) {
       setCode(location.state.code);
+      if (location.state.language) setLanguage(location.state.language);
       return;
     }
     const data = getStudioCode();
@@ -139,7 +162,7 @@ export default function AIReview() {
       const res = await fetch(`${API_BASE}/api/review`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, language: 'javascript', filename: 'snippet.js' }),
+        body: JSON.stringify({ code, language, filename: `snippet.${lang.ext}` }),
         signal: controller.signal,
       });
 
@@ -197,15 +220,16 @@ export default function AIReview() {
     if (result && phase === 'complete') {
       addHistory({
         type: 'review',
-        language: result.language || 'javascript',
+        language: result.language || language,
         code: code.slice(0, 20000),
-        filename: 'snippet.js',
+        filename: `snippet.${lang.ext}`,
         summary: result.summary || 'AI Review complete',
         overallScore: result.overallScore || 0,
         insightCount: result.insights?.length || 0,
         hasError: false,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, phase]);
 
   // Retrieve code from Studio
@@ -213,6 +237,7 @@ export default function AIReview() {
     const data = getStudioCode();
     if (data?.code?.trim()) {
       setCode(data.code);
+      if (data.language) setLanguage(data.language);
       setResult(null);
       setStreamText('');
       setPhase(null);
@@ -269,12 +294,24 @@ export default function AIReview() {
         <div className="review-editor-panel">
           <div className="review-panel-header">
             <span className="section-label">EDITOR</span>
-            <span className="label label-muted">snippet.js</span>
+            <div className="review-panel-header__right">
+              <select
+                className="review-lang-select"
+                value={language}
+                onChange={e => setLanguage(e.target.value)}
+              >
+                {LANGUAGES.map(l => (
+                  <option key={l.id} value={l.id}>{l.label}</option>
+                ))}
+              </select>
+              <span className="label label-muted">snippet.{lang.ext}</span>
+            </div>
           </div>
           <div className="review-editor-wrap">
             <CodeEditor
               value={code}
               onChange={setCode}
+              language={language}
               highlightedLines={highlightedLines}
               activeLine={activeLine}
               height="100%"
@@ -355,6 +392,7 @@ export default function AIReview() {
                   <div className="review-improved__code">
                     <CodeEditor
                       value={result.improvedCode}
+                      language={result.language || language}
                       readOnly={true}
                       height="320px"
                     />

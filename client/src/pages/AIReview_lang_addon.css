@@ -1,0 +1,30 @@
+/* Language dropdown added to the editor panel header */
+
+.review-panel-header__right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+
+.review-lang-select {
+    background: var(--bg-raised);
+    border: 1px solid var(--border-bright);
+    border-radius: 3px;
+    padding: 3px var(--space-3);
+    color: var(--text-primary);
+    font-family: var(--font-code);
+    font-size: var(--text-xs);
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--duration-fast) ease;
+}
+
+.review-lang-select:hover,
+.review-lang-select:focus {
+    border-color: var(--accent);
+}
+
+.review-lang-select option {
+    background: var(--bg-raised);
+    color: var(--text-primary);
+}
