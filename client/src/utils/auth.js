@@ -48,7 +48,7 @@ export function onAuthChange(callback) {
 // old token eventually expires.
 export async function updateDisplayName(name) {
     const auth = getAuth();
-    if (!auth ?.token) throw new Error('Not signed in');
+    if (!auth?.token) throw new Error('Not signed in');
 
     const res = await fetch(`${API_BASE}/api/users/me`, {
         method: 'PATCH',
@@ -71,7 +71,7 @@ export async function updateDisplayName(name) {
 // There's nothing left on the backend to sign back into afterward.
 export async function deleteAccount() {
     const auth = getAuth();
-    if (!auth ?.token) throw new Error('Not signed in');
+    if (!auth?.token) throw new Error('Not signed in');
 
     const res = await fetch(`${API_BASE}/api/users/me`, {
         method: 'DELETE',
