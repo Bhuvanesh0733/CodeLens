@@ -292,3 +292,106 @@
         padding: 4px;
     }
 }
+
+
+/* ── Append to the end of Nav.css — new class names only, no collisions ── */
+
+.nav__user-menu-edit-name {
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    padding: var(--space-1, 4px) 0;
+    transition: color var(--duration-fast) ease;
+}
+
+.nav__user-menu-edit-name:hover {
+    color: var(--text-primary);
+}
+
+.nav__user-name-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.nav__user-name-input {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    width: 100%;
+}
+
+.nav__user-name-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.nav__user-name-actions {
+    display: flex;
+    gap: var(--space-2);
+}
+
+.nav__user-name-save,
+.nav__user-name-cancel {
+    font-family: var(--font-display);
+    font-size: var(--text-2xs);
+    padding: 4px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    transition: border-color var(--duration-fast) ease, color var(--duration-fast) ease;
+}
+
+.nav__user-name-save {
+    color: var(--accent);
+}
+
+.nav__user-name-save:hover:not(:disabled) {
+    border-color: var(--accent);
+}
+
+.nav__user-name-save:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.nav__user-name-cancel {
+    color: var(--text-muted);
+}
+
+.nav__user-name-cancel:hover {
+    color: var(--text-secondary);
+}
+
+.nav__user-menu-delete {
+    text-align: left;
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    color: var(--text-muted);
+    padding: var(--space-1, 4px) 0;
+    transition: color var(--duration-fast) ease;
+}
+
+.nav__user-menu-delete:hover:not(:disabled) {
+    color: #e5484d;
+}
+
+.nav__user-menu-delete--confirm {
+    color: #e5484d;
+    font-weight: 600;
+}
+
+.nav__user-menu-delete:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.nav__user-menu-error {
+    font-family: var(--font-code);
+    font-size: var(--text-2xs);
+    color: #e5484d;
+}

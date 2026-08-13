@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { getAuth, clearAuth, onAuthChange } from '../../utils/auth';
+import { getAuth, clearAuth, onAuthChange, updateDisplayName, deleteAccount } from '../../utils/auth';
 import './Nav.css';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -12,6 +12,13 @@ export default function Nav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [auth, setAuth] = useState(() => getAuth());
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [savingName, setSavingName] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Nav is mounted once for the whole app and never remounts on route
   // changes, so it needs to be told explicitly when sign-in/sign-out
@@ -23,6 +30,65 @@ export default function Nav() {
   const handleSignOut = () => {
     clearAuth();
     setUserMenuOpen(false);
+  };
+
+  // Reset any half-finished edit/delete state whenever the dropdown
+  // closes, so reopening it always starts fresh instead of showing
+  // whatever was left over from last time.
+  useEffect(() => {
+    if (!userMenuOpen) {
+      setEditingName(false);
+      setNameError('');
+      setConfirmDelete(false);
+      setDeleteError('');
+    }
+  }, [userMenuOpen]);
+
+  const startEditName = () => {
+    setNameDraft(auth?.user?.name || '');
+    setNameError('');
+    setEditingName(true);
+  };
+
+  const handleSaveName = async (e) => {
+    e.preventDefault();
+    const trimmed = nameDraft.trim();
+    if (!trimmed) {
+      setNameError('Name cannot be empty');
+      return;
+    }
+    setSavingName(true);
+    setNameError('');
+    try {
+      await updateDisplayName(trimmed);
+      setEditingName(false);
+    } catch (err) {
+      setNameError(err.message);
+    } finally {
+      setSavingName(false);
+    }
+  };
+
+  // Two-step delete: first click just asks for confirmation, second click
+  // (with the button now reading "Click again to confirm") actually does
+  // it — a full modal felt heavy for this, but a single accidental click
+  // shouldn't be able to delete an account.
+  const handleDeleteAccount = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      return;
+    }
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await deleteAccount();
+      // deleteAccount() clears the session and fires onAuthChange, which
+      // flips `auth` to null and unmounts this whole dropdown — no need
+      // to manually close it here.
+    } catch (err) {
+      setDeleteError(err.message);
+      setDeleting(false);
+    }
   };
 
   // Close the user dropdown on outside click
@@ -113,7 +179,42 @@ export default function Nav() {
               {userMenuOpen && (
                 <div className="nav__user-menu">
                   <div className="nav__user-menu-email">{auth.user.email}</div>
+
+                  {editingName ? (
+                    <form className="nav__user-name-form" onSubmit={handleSaveName}>
+                      <input
+                        className="nav__user-name-input"
+                        value={nameDraft}
+                        onChange={(e) => setNameDraft(e.target.value)}
+                        maxLength={80}
+                        autoFocus
+                      />
+                      <div className="nav__user-name-actions">
+                        <button type="submit" className="nav__user-name-save" disabled={savingName}>
+                          {savingName ? 'Saving…' : 'Save'}
+                        </button>
+                        <button type="button" className="nav__user-name-cancel" onClick={() => setEditingName(false)}>
+                          Cancel
+                        </button>
+                      </div>
+                      {nameError && <div className="nav__user-menu-error">{nameError}</div>}
+                    </form>
+                  ) : (
+                    <button className="nav__user-menu-edit-name" onClick={startEditName}>
+                      Edit name
+                    </button>
+                  )}
+
                   <button className="nav__user-menu-signout" onClick={handleSignOut}>Sign out</button>
+
+                  <button
+                    className={`nav__user-menu-delete ${confirmDelete ? 'nav__user-menu-delete--confirm' : ''}`}
+                    onClick={handleDeleteAccount}
+                    disabled={deleting}
+                  >
+                    {deleting ? 'Deleting…' : confirmDelete ? 'Click again to confirm' : 'Delete account'}
+                  </button>
+                  {deleteError && <div className="nav__user-menu-error">{deleteError}</div>}
                 </div>
               )}
             </div>

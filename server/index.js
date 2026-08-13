@@ -5,6 +5,8 @@ const { handleExecute } = require('./routes/execute');
 const { handleVisualize } = require('./routes/visualize');
 const { getHistory } = require('./routes/history');
 const { handleGoogleAuth } = require('./routes/auth');
+const { handleGetMe, handleUpdateMe, handleDeleteMe } = require('./routes/users');
+const { connectDB } = require('./db');
 const { reviewEmitter, getStats } = require('./events/emitter');
 
 const PORT = process.env.PORT || 3001;
@@ -24,8 +26,8 @@ function broadcastStats() {
 
 function setCorsHeaders(res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 }
 
 const server = http.createServer((req, res) => {
@@ -64,6 +66,24 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // ── GET /api/users/me ── read the signed-in user's profile ──
+    if (path === '/api/users/me' && req.method === 'GET') {
+        handleGetMe(req, res);
+        return;
+    }
+
+    // ── PATCH /api/users/me ── update the signed-in user's display name ──
+    if (path === '/api/users/me' && req.method === 'PATCH') {
+        handleUpdateMe(req, res);
+        return;
+    }
+
+    // ── DELETE /api/users/me ── permanently delete the signed-in user's account ──
+    if (path === '/api/users/me' && req.method === 'DELETE') {
+        handleDeleteMe(req, res);
+        return;
+    }
+
     // ── GET /api/history ──
     if (path === '/api/history' && req.method === 'GET') {
         const history = getHistory();
@@ -98,38 +118,52 @@ const server = http.createServer((req, res) => {
     res.end(JSON.stringify({ error: 'Not found', path }));
 });
 
-server.listen(PORT, () => {
-    console.log('');
-    console.log('  ╔══════════════════════════════════════════╗');
-    console.log('  ║   CodeLens Server  ·  Running            ║');
-    console.log(`  ║   http://localhost:${PORT}                ║`);
-    console.log('  ╠══════════════════════════════════════════╣');
-    console.log('  ║  POST /api/execute   — run any language  ║');
-    console.log('  ║  POST /api/visualize — line-by-line trace║');
-    console.log('  ║  POST /api/review    — AI code review    ║');
-    console.log('  ║  POST /api/auth/google — Google sign-in  ║');
-    console.log('  ║  GET  /api/history   — review history    ║');
-    console.log('  ║  GET  /api/events    — SSE live stats    ║');
-    console.log('  ╚══════════════════════════════════════════╝');
-    console.log('');
-    if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'your_api_key_here') {
-        console.warn('  ⚠  GROQ_API_KEY not set — add it to server/.env');
-        console.warn('     (AI Review will show an error without it)');
-    } else {
-        console.log('  ✓  Groq API key loaded');
-    }
-    if (!process.env.GOOGLE_CLIENT_ID) {
-        console.warn('  ⚠  GOOGLE_CLIENT_ID not set — add it to server/.env');
-        console.warn('     (Google Sign-In will show an error without it)');
-    } else {
-        console.log('  ✓  Google Client ID loaded');
-    }
-    if (!process.env.JWT_SECRET) {
-        console.warn('  ⚠  JWT_SECRET not set — add it to server/.env');
-        console.warn('     (any random long string works, e.g. openssl rand -hex 32)');
-    }
-    console.log('');
-});
+// Connect to MongoDB before accepting traffic — if this fails (missing or
+// wrong MONGODB_URI), fail loudly right at startup instead of every
+// sign-in attempt failing mysteriously later.
+connectDB()
+    .then(() => {
+        server.listen(PORT, () => {
+            console.log('');
+            console.log('  ╔══════════════════════════════════════════╗');
+            console.log('  ║   CodeLens Server  ·  Running            ║');
+            console.log(`  ║   http://localhost:${PORT}                ║`);
+            console.log('  ╠══════════════════════════════════════════╣');
+            console.log('  ║  POST   /api/execute    — run any language║');
+            console.log('  ║  POST   /api/visualize  — line-by-line    ║');
+            console.log('  ║  POST   /api/review     — AI code review  ║');
+            console.log('  ║  POST   /api/auth/google— Google sign-in  ║');
+            console.log('  ║  GET    /api/users/me   — read profile    ║');
+            console.log('  ║  PATCH  /api/users/me   — update profile  ║');
+            console.log('  ║  DELETE /api/users/me   — delete account  ║');
+            console.log('  ║  GET    /api/history    — review history  ║');
+            console.log('  ║  GET    /api/events     — SSE live stats  ║');
+            console.log('  ╚══════════════════════════════════════════╝');
+            console.log('');
+            if (!process.env.GROQ_API_KEY || process.env.GROQ_API_KEY === 'your_api_key_here') {
+                console.warn('  ⚠  GROQ_API_KEY not set — add it to server/.env');
+                console.warn('     (AI Review will show an error without it)');
+            } else {
+                console.log('  ✓  Groq API key loaded');
+            }
+            if (!process.env.GOOGLE_CLIENT_ID) {
+                console.warn('  ⚠  GOOGLE_CLIENT_ID not set — add it to server/.env');
+                console.warn('     (Google Sign-In will show an error without it)');
+            } else {
+                console.log('  ✓  Google Client ID loaded');
+            }
+            if (!process.env.JWT_SECRET) {
+                console.warn('  ⚠  JWT_SECRET not set — add it to server/.env');
+                console.warn('     (any random long string works, e.g. openssl rand -hex 32)');
+            }
+            console.log('');
+        });
+    })
+    .catch((err) => {
+        console.error('  ✗  Could not connect to MongoDB:', err.message);
+        console.error('     Check MONGODB_URI in server/.env');
+        process.exit(1);
+    });
 
 server.on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
