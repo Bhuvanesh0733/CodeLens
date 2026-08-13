@@ -48,7 +48,7 @@ export function onAuthChange(callback) {
 // old token eventually expires.
 export async function updateDisplayName(name) {
     const auth = getAuth();
-    if (!auth ? .token) throw new Error('Not signed in');
+    if (!auth ?.token) throw new Error('Not signed in');
 
     const res = await fetch(`${API_BASE}/api/users/me`, {
         method: 'PATCH',
